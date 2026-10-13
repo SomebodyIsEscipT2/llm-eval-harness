@@ -27,6 +27,8 @@ def summary_table(result: RunResult) -> str:
         f"tokens     {u.total_tokens} total "
         f"({u.prompt_tokens} prompt / {u.completion_tokens} completion)"
     )
+    if result.total_cost_usd is not None:
+        lines.append(f"cost       ${result.total_cost_usd:.4f} (estimated)")
     return "\n".join(lines)
 
 

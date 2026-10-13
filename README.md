@@ -102,11 +102,11 @@ Design notes:
 - [x] Scorers: exact, contains, regex
 - [x] Async runner with token/latency capture
 - [x] CLI report
-- [ ] JSON-schema scorer
-- [ ] LLM-as-judge scorer (fixed judge model for comparability)
-- [ ] `harness diff runA.json runB.json` — regression detection
-- [ ] OpenAI-compatible + local (Ollama) providers
-- [ ] Cost estimation from model price tables
+- [x] JSON-schema scorer
+- [x] LLM-as-judge scorer (fixed judge model for comparability)
+- [x] `harness diff runA.json runB.json` — regression detection
+- [x] OpenAI-compatible + local (Ollama) providers
+- [x] Cost estimation from model price tables
 
 ## Development
 
@@ -173,4 +173,69 @@ a CA bundle, or disable verification for a trusted local proxy:
 ```bash
 HARNESS_TLS_VERIFY=/path/to/ca-bundle.pem harness evals/arithmetic.yaml
 HARNESS_TLS_VERIFY=0 harness evals/arithmetic.yaml   # trusted local proxy only
+```
+
+## Regression diff
+
+Run a suite twice — before and after a model or prompt change — then diff the
+two artifacts. The command exits non-zero when anything regressed, so it
+drops straight into CI.
+
+```bash
+harness run evals/arithmetic.yaml --model openai/gpt-4o-mini --json runs/base.json
+harness run evals/arithmetic.yaml --model openai/gpt-4o     --json runs/cand.json
+
+harness diff runs/base.json runs/cand.json
+```
+
+```
+verdict    REGRESSION
+baseline   openai/gpt-4o-mini  (100.0%)
+candidate  openai/gpt-4o       (66.7%)
+regressed  1   fixed  0   still pass  2   still fail  0
+
+REGRESSED (passed before, fails now)
+  #1   7*6?
+        ↳ output differs
+```
+
+Each case is classified as `regressed`, `fixed`, `still_pass`, `still_fail`,
+`added`, or `removed`. If a case's input text changed between runs the diff
+flags it (⚠), so a mis-aligned comparison is visible rather than silent.
+Use `--show-all` to include unchanged cases and `--json out.json` to write a
+machine-readable diff.
+
+### CI gate
+
+```yaml
+- run: harness run evals/arithmetic.yaml --json runs/base.json
+- run: harness run evals/arithmetic.yaml --model "$NEW_MODEL" --json runs/cand.json
+- run: harness diff runs/base.json runs/cand.json   # fails on regression
+```
+
+## Providers
+
+| Provider | Name | Notes |
+| --- | --- | --- |
+| OpenRouter | `openrouter` | `OPENROUTER_API_KEY`; model IDs like `openai/gpt-4o-mini` |
+| OpenAI-compatible | `openai_compat` | `OPENAI_API_KEY`; works with Groq, Together, vLLM, LM Studio via `--base-url` |
+| Ollama (local) | `ollama` | No key; talks to `http://localhost:11434` |
+
+```bash
+harness run evals/arithmetic.yaml --provider ollama --model llama3.1
+harness run evals/arithmetic.yaml --provider openai_compat --model gpt-4o-mini
+```
+
+## Cost estimation
+
+Every case records estimated cost when the model is in the price table
+(`harness/pricing.py`, USD per 1M tokens). An unpriced model yields **no**
+cost rather than a guessed one. Overlay your own prices with `--costs`:
+
+```json
+{ "my/model": { "prompt_per_m": 1.0, "completion_per_m": 2.0 } }
+```
+
+```bash
+harness run evals/arithmetic.yaml --model my/model --costs prices.json
 ```

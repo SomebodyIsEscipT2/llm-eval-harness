@@ -33,3 +33,5 @@ def get(name: str) -> Type[Provider]:
 
 # Import built-in providers so they self-register.
 from harness.providers import openrouter as _openrouter  # noqa: E402,F401
+from harness.providers import openai_compat as _openai  # noqa: E402,F401
+from harness.providers import ollama as _ollama  # noqa: E402,F401
