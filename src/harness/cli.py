@@ -68,7 +68,9 @@ async def _amain(args: argparse.Namespace) -> int:
     print(report(result, only_failures=args.failures_only))
 
     if args.json_out:
-        Path(args.json_out).write_text(
+        out_path = Path(args.json_out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
             json.dumps(result.to_dict(), indent=2), encoding="utf-8"
         )
         print(f"\nartifact written to {args.json_out}")
@@ -78,7 +80,10 @@ async def _amain(args: argparse.Namespace) -> int:
 
 def main(argv: Optional[list] = None) -> int:
     args = build_parser().parse_args(argv)
-    return asyncio.run(_amain(args))
+    try:
+        return asyncio.run(_amain(args))
+    except KeyboardInterrupt:
+        return 130
 
 
 if __name__ == "__main__":

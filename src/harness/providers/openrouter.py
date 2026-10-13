@@ -1,7 +1,12 @@
 """OpenRouter provider.
 
-Model names must use the ``openrouter/<provider>/<model>`` form, e.g.
-``openrouter/openai/gpt-4o-mini``.
+OpenRouter model IDs use the ``<provider>/<model>`` form, e.g.
+``openai/gpt-4o-mini`` or ``anthropic/claude-3.5-sonnet``.
+
+The ``openrouter/`` prefix used elsewhere in some harnesses is a routing
+convention, not part of OpenRouter's own API; if a caller passes
+``openrouter/openai/gpt-4o-mini`` we strip the leading ``openrouter/`` so
+the request still works.
 """
 
 from __future__ import annotations
@@ -16,7 +21,13 @@ from harness.providers import register
 from harness.providers.base import Completion, Provider, ProviderError, Usage
 
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "openrouter/openai/gpt-4o-mini"
+DEFAULT_MODEL = "openai/gpt-4o-mini"
+
+
+def normalize_model(model: str) -> str:
+    """Strip a leading ``openrouter/`` routing prefix if present."""
+    prefix = "openrouter/"
+    return model[len(prefix):] if model.startswith(prefix) else model
 
 
 @register("openrouter")
@@ -32,6 +43,7 @@ class OpenRouterProvider(Provider):
         timeout: float = 60.0,
         client: Optional[httpx.AsyncClient] = None,
         app_name: str = "llm-eval-harness",
+        verify: Any = None,
     ) -> None:
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
         if not self.api_key:
@@ -42,12 +54,24 @@ class OpenRouterProvider(Provider):
         self.model = model
         self.timeout = timeout
         self.app_name = app_name
+        # TLS verification: explicit value wins; otherwise honour
+        # HARNESS_TLS_VERIFY (e.g. behind a TLS-intercepting egress proxy).
+        if verify is not None:
+            self.verify = verify
+        else:
+            env = os.environ.get("HARNESS_TLS_VERIFY")
+            if env is None:
+                self.verify = True
+            elif env.strip().lower() in ("0", "false", "no", "off"):
+                self.verify = False
+            else:
+                self.verify = env  # path to a CA bundle
         self._client = client
         self._owns_client = client is None
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self.timeout)
+            self._client = httpx.AsyncClient(timeout=self.timeout, verify=self.verify)
             self._owns_client = True
         return self._client
 
@@ -67,7 +91,7 @@ class OpenRouterProvider(Provider):
         messages.append({"role": "user", "content": prompt})
 
         payload: Dict[str, Any] = {
-            "model": model or self.model,
+            "model": normalize_model(model or self.model),
             "messages": messages,
             "temperature": temperature,
         }
@@ -111,7 +135,6 @@ class OpenRouterProvider(Provider):
             latency_ms=latency_ms,
             raw=data,
         )
-
     async def aclose(self) -> None:
         if self._client is not None and self._owns_client:
             await self._client.aclose()

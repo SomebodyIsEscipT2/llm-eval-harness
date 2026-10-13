@@ -17,4 +17,5 @@ cases:
     tags: [math, medium]
   - input: "Is 17 a prime number? Reply yes or no."
     expected: "yes"
+    scorer: { type: contains, case_sensitive: false }
     tags: [math, reasoning]
