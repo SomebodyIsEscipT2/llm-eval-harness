@@ -1,0 +1,11 @@
+name: ascii-art
+description: Example suite showing a regex scorer — output must be plain ASCII letters.
+defaults:
+  scorer:
+    type: regex
+    pattern: "^[A-Za-z!., ]+$"
+cases:
+  - input: "Write the word 'hello' in lowercase letters only."
+    tags: [format]
+  - input: "Write the word 'world' in lowercase letters only."
+    tags: [format]

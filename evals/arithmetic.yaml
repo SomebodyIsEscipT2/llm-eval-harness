@@ -1,0 +1,20 @@
+name: arithmetic-basics
+description: Small sanity suite — does the model do simple arithmetic reliably?
+defaults:
+  scorer: exact:ci
+cases:
+  - input: "What is 2 + 2? Reply with just the number."
+    expected: "4"
+    tags: [math, easy]
+  - input: "What is 7 * 6? Reply with just the number."
+    expected: "42"
+    tags: [math, easy]
+  - input: "What is 15 - 9? Reply with just the number."
+    expected: "6"
+    tags: [math, easy]
+  - input: "What is 100 / 4? Reply with just the number."
+    expected: "25"
+    tags: [math, medium]
+  - input: "Is 17 a prime number? Reply yes or no."
+    expected: "yes"
+    tags: [math, reasoning]
