@@ -1,0 +1,25 @@
+name: structured-extraction
+description: Does the model return JSON of the exact shape we asked for?
+defaults:
+  scorer:
+    type: json_schema
+    schema:
+      type: object
+      required: [title, priority, tags]
+      properties:
+        title: {type: string}
+        priority: {type: string, enum: [low, medium, high]}
+        tags:
+          type: array
+          items: {type: string}
+cases:
+  - input: >-
+      Convert this to JSON with keys title (string), priority (low|medium|high),
+      and tags (array of strings): "Server disk is 95% full, needs urgent attention."
+      Reply with only the JSON.
+    tags: [json, extraction]
+  - input: >-
+      Convert this to JSON with keys title (string), priority (low|medium|high),
+      and tags (array of strings): "Update the footer copyright year sometime."
+      Reply with only the JSON.
+    tags: [json, extraction]

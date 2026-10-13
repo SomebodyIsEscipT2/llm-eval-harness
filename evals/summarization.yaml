@@ -1,0 +1,26 @@
+name: summarization-quality
+description: >-
+  Open-ended quality check using an LLM judge. No exact answer exists, so a
+  pinned judge model grades correctness and completeness on a rubric.
+defaults:
+  scorer:
+    type: llm_judge
+    judge_model: openai/gpt-4o-mini
+    threshold: 0.7
+cases:
+  - input: >-
+      Summarize in one sentence: "The company reported record revenue of $4.2M,
+      up 38% year over year, driven primarily by new enterprise contracts, though
+      operating costs also rose 22% on hiring."
+    expected: >-
+      Revenue hit a record $4.2M (up 38% YoY) on enterprise deals, while costs
+      rose 22% from hiring.
+    tags: [summarization]
+  - input: >-
+      Summarize in one sentence: "The migration to the new database completed
+      two weeks late because of an unexpected schema conflict, but caused zero
+      downtime and improved query latency by 40%."
+    expected: >-
+      The database migration finished two weeks late due to a schema conflict
+      but had zero downtime and cut query latency 40%.
+    tags: [summarization]

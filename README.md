@@ -120,3 +120,57 @@ Tests mock all network calls, so the suite runs offline and in CI.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Scorers
+
+| Scorer | Spec | Passes when |
+| --- | --- | --- |
+| Exact match | `exact` / `exact:ci` | Output equals expected (optionally case-insensitive) |
+| Contains | `{type: contains, case_sensitive: false}` | Output contains the needle(s) |
+| Regex | `{type: regex, pattern: "..."}` | Output matches the pattern |
+| JSON schema | `{type: json_schema, schema: {...}}` | Output parses as JSON and satisfies the schema |
+| LLM judge | `{type: llm_judge, judge_model: "...", threshold: 0.7}` | A pinned judge model grades the answer at or above the threshold |
+
+### Structured output
+
+Ask for JSON and assert its shape, without an extra dependency:
+
+```yaml
+defaults:
+  scorer:
+    type: json_schema
+    schema:
+      type: object
+      required: [title, priority]
+      properties:
+        title: {type: string}
+        priority: {type: string, enum: [low, medium, high]}
+```
+
+The scorer pulls JSON out of fences or prose, then checks `type`,
+`required`, `properties`, `items`, and `enum`. No network, no dependency.
+
+### Graded (open-ended) answers
+
+For summaries and other answers with no single correct string, use a judge —
+with a **pinned model** so runs stay comparable, and structured output so a
+missing verdict fails loudly instead of silently passing:
+
+```yaml
+defaults:
+  scorer:
+    type: llm_judge
+    judge_model: openai/gpt-4o-mini
+    threshold: 0.7
+```
+
+## TLS-intercepting environments
+
+If your network intercepts TLS (corporate proxy, egress gateway), Python's
+SSL stack may reject the chain even where `curl` works. Point the harness at
+a CA bundle, or disable verification for a trusted local proxy:
+
+```bash
+HARNESS_TLS_VERIFY=/path/to/ca-bundle.pem harness evals/arithmetic.yaml
+HARNESS_TLS_VERIFY=0 harness evals/arithmetic.yaml   # trusted local proxy only
+```
